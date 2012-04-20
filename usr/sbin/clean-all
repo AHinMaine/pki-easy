@@ -1,0 +1,68 @@
+#!/bin/sh
+
+. /opt/etc/openssl/vars
+
+if [ -z "${KEY_DIR}" -o ! -d "${KEYDIR}" ] ; then
+    echo 'Please source the vars script first (i.e. "source ./vars")'
+    echo 'Make sure you have edited it to reflect your configuration.'
+fi
+    
+
+# Initialize the $KEY_DIR directory.
+# Note that this script does a
+# rm -rf on $KEY_DIR so be careful!
+
+cat <<SHOWWARNING
+
+**************
+   CAUTION
+**************
+
+The following files and directories will be purged:
+
+    private key dir = $PRIVATE_KEY_DIR
+            key dir = $KEY_DIR
+
+        CA req cert = $_REQCERT
+        CA crl cert = $_CRLCERT
+            CA cert = $_CACERT
+             CA key = $_CAKEY
+
+         cert index = $SSLROOT/index.txt
+        cert serial = $SSLROOT/serial
+         crl number = $SSLROOT/crlnumber
+
+SHOWWARNING
+
+echo -n "Proceed with purge? [y/N] "
+read CHOICE
+
+if [ ! "${CHOICE}" = "y" ] ; then
+    echo "Aborting..."
+    exit 1
+fi
+
+if [ -d "${PRIVATE_KEY_DIR}" -a ! "${PRIVATE_KEY_DIR}" = "/" ]; then
+    rm -rf "${PRIVATE_KEY_DIR}/*" &&
+        echo "Private keys cleared..."
+fi
+
+if [ -d "${KEY_DIR}" -a ! "${KEY_DIR}" = "/" ]; then
+    rm -rf "${KEY_DIR}/*" &&
+    echo "Public keys cleared..."
+fi
+
+[ -w "${_REQCERT}" ] && rm -rf ${_REQCERT} && echo "${_REQCERT} cleared..."
+[ -w "${_CRLCERT}" ] && rm -rf ${_CRLCERT} && echo "${_CRLCERT} cleared..."
+[ -w "${_CACERT}"  ] && rm -rf ${_CACERT}  && echo "${_CACERT} cleared..."
+[ -w "${_CAKEY}"   ] && rm -rf ${_CAKEY}   && echo "${_CAKEY} cleared..."
+
+[ -w "${SSLROOT}/index.txt" ] && cat /dev/null > ${SSLROOT}/index.txt
+
+[ -w "${SSLROOT}/serial"    ] && echo 01 > $SSLROOT/serial
+[ -w "${SSLROOT}/crlnumber" ] && echo 01 > $SSLROOT/crlnumber
+
+rm -rf ${SSLROOT}/*.old && echo "openssl stale backup files cleared..."
+
+echo "Cleaning complete.  Now run: build-ca"
+

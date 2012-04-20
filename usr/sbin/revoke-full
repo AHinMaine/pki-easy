@@ -1,0 +1,55 @@
+#!/bin/sh
+
+. /opt/etc/openssl/vars
+
+# revoke a certificate, regenerate CRL,
+# and verify revocation
+
+CRL=$_CRLCERT
+
+RT="revoke-test.pem"
+
+if [ $# -ne 1 ]; then
+    echo "usage: revoke-full <cert-name-base>";
+    exit 1
+fi
+
+
+if [ -d "${SSLROOT}" ]; then
+
+    cd $SSLROOT &&
+    rm -f "$RT"
+
+    # set defaults
+    export KEY_CN=""
+    export KEY_OU=""
+    export KEY_NAME=""
+
+    if [ ! -f "$1.crt" ] ; then
+
+        # revoke key and generate a new CRL
+        $OPENSSL ca -revoke "${KEY_DIR}/$1.crt" -config "$KEY_CONFIG"
+
+        # generate a new CRL -- try to be compatible with
+        # intermediate PKIs
+
+        $OPENSSL ca -gencrl -out "$CRL" -config "$KEY_CONFIG"
+
+        if [ -e "export-ca.crt" ]; then
+            cat export-ca.crt $CRL > "$RT"
+        else
+            cat $CRL > "$RT"
+        fi
+    
+        # verify the revocation
+        $OPENSSL verify -CAfile "$RT" -crl_check "${KEY_DIR}/$1.crt"
+
+    else 
+        echo "certificate file not found: ${KEY_DIR}/$1.crt"
+        exit 1
+    fi
+
+else
+    echo 'Please source the vars script first (i.e. "source ./vars")'
+    echo 'Make sure you have edited it to reflect your configuration.'
+fi

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+#
+# Build a root certificate
+#
+
+export BUILDCA=true
+
+export EASY_RSA="${EASY_RSA:-.}"
+"/usr/sbin/pkitool" --interact --pass --initca $*

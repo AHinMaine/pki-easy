@@ -1,0 +1,140 @@
+export DEBUG=1
+
+die()
+{
+    local m="$1"
+
+    echo "$m" >&2
+    exit 1
+}
+
+# The root of your certificate repository
+#
+export SSLROOT="/opt/etc/openssl"
+
+export KEY_CONFIG=${SSLROOT}/openssl-1.0.0.cnf
+
+# In case you want a different cnf file for CA specific activities
+#
+export CA_KEY_CONFIG=${SSLROOT}/openssl-1.0.0.cnf
+
+# easy-rsa parameter settings
+
+# NOTE: If you installed from an RPM, don't edit this file
+# in place in /usr/share/openvpn/easy-rsa -- instead, you
+# should copy the whole easy-rsa directory to another
+# location (such as /etc/openvpn) so that your edits will
+# not be wiped out by a future OpenVPN package upgrade.
+
+# This variable should point to the top level of the
+# easy-rsa tree.
+
+# Just for compatibility with the old scripts
+#
+export EASY_RSA=$SSLROOT
+
+
+# This variable should point to
+# the openssl.cnf file included
+# with easy-rsa.
+#export KEY_CONFIG=`/usr/sbin/whichopensslcnf $EASY_RSA`
+
+
+if [ ! -s "${KEY_CONFIG}" -o ! -r "${KEY_CONFIG}" ] ; then
+    echo "invalid or unreadable openssl.cnf file..."
+    exit 1
+fi
+
+if [ ! -s "${CA_KEY_CONFIG}" -o ! -r "${CA_KEY_CONFIG}" ] ; then
+    echo "invalid or unreadable CA openssl config file... skipping..."
+fi
+
+
+
+#
+# These variable should point to the requested executables
+#
+export OPENSSL="/usr/bin/openssl"
+
+if [ ! -f "${OPENSSL}" -o ! -x "${OPENSSL}" ] ; then
+    echo "No openssl executable binary found..."
+    exit 1
+fi
+
+export PKCS11TOOL="pkcs11-tool"
+export GREP="grep"
+
+
+# Edit these variables to point to your soon-to-be-created key directories.
+#
+export KEY_DIR="$SSLROOT/certs"
+export PRIVATE_KEY_DIR="$SSLROOT/private"
+export REQ_DIR=${KEY_DIR}
+
+export _CACERT="$SSLROOT/cacert.pem"
+export _CAKEY="${PRIVATE_KEY_DIR}/cakey.pem"
+export _CAREQ="$SSLROOT/careq.pem"
+export _CRLCERT="$SSLROOT/crl.pem"
+
+
+# Skip this validation process when building the CA
+#
+if [ -z "${BUILDCA}" ] ; then
+
+    if [ ! -f "${_CAKEY}" -o ! -w "${_CAKEY}" ]; then
+        die "No CA KEY found..."
+    fi
+    
+    if [ ! -f "${_CACERT}" -o ! -w "${_CACERT}" ]; then
+        die "No CA certificate found..."
+    fi
+    
+    if [ ! -f "${_CAREQ}" -o ! -w "${_CAREQ}" ]; then
+        die "No req certificate found..."
+    fi
+    
+    if [ ! -f "${_CRLCERT}" -o ! -w "${_CRLCERT}" ]; then
+        die "No crl certificate found..."
+    fi
+
+fi
+
+
+# PKCS11 fixes
+export PKCS11_MODULE_PATH="dummy"
+export PKCS11_PIN="dummy"
+
+# Increase this to 2048 if you are paranoid.  This will slow down TLS
+# negotiation performance as well as the one-time DH parms generation
+# process.
+export KEY_SIZE=2048
+
+export KEY_MD=sha1
+
+# In how many days should the root CA key expire?
+export CA_EXPIRE=3650
+
+# In how many days should certificates expire?
+export KEY_EXPIRE=3650
+
+# These are the default values for fields which will be placed in the
+# certificate.  Don't leave any of these fields blank.
+
+export KEY_COUNTRY="US"
+export KEY_PROVINCE="Maine"
+export KEY_CITY="Portland"
+export KEY_ORG="Sample Company"
+export KEY_OU="Information Security"
+export KEY_EMAIL="security@example.com"
+
+# Don't really have to change these...
+export KEY_CN=changeme
+export KEY_NAME=changeme
+export PKCS11_MODULE_PATH=changeme
+export PKCS11_PIN=1234
+
+
+# A little verification that we made it to the end of this file alive...
+export SSLVARS="loaded"
+
+# vim: set et ff=unix ft=sh sts=4 sw=4 ts=4 : 
